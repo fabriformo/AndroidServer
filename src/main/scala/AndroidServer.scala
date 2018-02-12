@@ -1,7 +1,6 @@
-import java.io.{BufferedReader, InputStreamReader, PrintStream}
+import java.io._
 import java.net.{ServerSocket, Socket}
 import java.util.concurrent.ConcurrentHashMap
-import java.io.ObjectInputStream
 
 import mymessage.MyMessage
 
@@ -10,11 +9,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object AndroidServer extends App {
-  case class User(name: String, sock: Socket, in: ObjectInputStream, out: PrintStream)
+  case class User(name: String, sock: Socket, in: ObjectInputStream, out: ObjectOutputStream)
   val users = new ConcurrentHashMap[String, User]().asScala
   var count= 0
   var j = 0
   var obj:Object = _
+  var temperatura: String = _
+  var pressione: String = _
   println("HI")
 
 
@@ -31,7 +32,7 @@ object AndroidServer extends App {
     while(true){
       val sock = ss.accept()
       //val in = new BufferedReader(new InputStreamReader(sock.getInputStream))
-      val out = new PrintStream(sock.getOutputStream)
+      val out = new ObjectOutputStream(sock.getOutputStream)
       val in = new ObjectInputStream(sock.getInputStream)
       Future{
         //out.println("What is your name")
@@ -75,13 +76,23 @@ object AndroidServer extends App {
         users -= user.name
         println("GONE :(")
         //obj = null
-      } else {
+      } else if(input.tipo == 2) {
         //for((n, u) <- users){
         //u.out.println(user.name+" : "+input)
         //u.out.println(j)
         //}
-        println(user.name+" ha aggiornato il valore in: "+input.message)
-
+        if(input.topic == 1){
+          println(user.name+" ha aggiornato la temperatura a: "+input.message)
+          //temperatura = input.message
+          for((n, u) <- users)
+            u.out.writeObject(input)
+        }
+        else if(input.topic == 2){
+          println(user.name+" ha aggiornato la pressione a: "+input.message)
+          //pressione = input.message
+          for((n, u) <- users)
+            u.out.writeObject(input)
+        }
         /*if(input == 1){
 
         }*/
