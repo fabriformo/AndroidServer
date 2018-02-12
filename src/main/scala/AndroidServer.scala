@@ -10,8 +10,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object AndroidServer extends App {
-  case class User(name: Int, sock: Socket, in: ObjectInputStream, out: PrintStream)
-  val users = new ConcurrentHashMap[Int, User]().asScala
+  case class User(name: String, sock: Socket, in: ObjectInputStream, out: PrintStream)
+  val users = new ConcurrentHashMap[String, User]().asScala
   var count= 0
   var j = 0
   var obj:Object = _
@@ -35,7 +35,8 @@ object AndroidServer extends App {
       val in = new ObjectInputStream(sock.getInputStream)
       Future{
         //out.println("What is your name")
-        val name=  count
+        val name=  sock.getInetAddress.toString
+        println("Si e' connesso l'utente "+ name)
         val user= User(name, sock, in, out)
         users += name-> user
         count= count +1
@@ -43,30 +44,51 @@ object AndroidServer extends App {
     }
   }
 
-  def nonblockingRead(in: ObjectInputStream): Option[Int] = {
-    obj = in.readObject()
+  /*def nonblockingRead(in: ObjectInputStream, sock: Socket): Option[Int] = {
+    if(sock.getInputStream.available() >0) {
+      obj = in.readObject()
+      println(obj)
+      //Thread.sleep(1000)
+    }
     if(obj != null)
       Some(obj.asInstanceOf[MyMessage].tipo)
     else None
+  }*/
+
+  def nonblockingRead(in: ObjectInputStream, sock: Socket): Option[MyMessage] = {
+    if(sock.getInputStream.available() >0) {
+      obj = in.readObject()
+      println(obj)
+      //Thread.sleep(1000)
+    }
+    if(obj != null){
+      Some(obj.asInstanceOf[MyMessage])
+    }
+    else None
   }
 
+
   def doChat(user: User): Unit = {
-    nonblockingRead(user.in).foreach { input =>
-      if(input == 0){
+    nonblockingRead(user.in, user.sock).foreach { input =>
+      if(input.tipo == 0){
         user.sock.close()
         users -= user.name
         println("GONE :(")
+        //obj = null
       } else {
         //for((n, u) <- users){
         //u.out.println(user.name+" : "+input)
         //u.out.println(j)
         //}
-        //println(user.name+" ha aggiornato il valore in: "+obj.asInstanceOf[MyMessage].message)
-        if(input == 1){
+        println(user.name+" ha aggiornato il valore in: "+input.message)
 
-        }
+        /*if(input == 1){
+
+        }*/
         //j +=1
+        //obj = null
       }
+      obj = null
     }
   }
 }
